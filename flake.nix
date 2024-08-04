@@ -1,5 +1,5 @@
 {
-  description = "Build a cargo project";
+  description = "Build DDI -- a safe Rust DD";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -21,11 +21,36 @@
       url = "github:rustsec/advisory-db";
       flake = false;
     };
+
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+    };
   };
 
-  outputs = { self, nixpkgs, crane, fenix, flake-utils, advisory-db, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
+  outputs = {
+    self,
+    nixpkgs,
+    crane,
+    fenix,
+    flake-utils,
+    advisory-db,
+    ...
+  } @ inputs:
+    inputs.flake-parts.lib.mkFlake {inherit inputs;} {
+      flake = {
+      };
+
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+
+      perSystem = {
+        config,
+        system,
+        ...
+      }: let
+        # flake-utils.lib.eachDefaultSystem (system: let
         pkgs = nixpkgs.legacyPackages.${system};
 
         inherit (pkgs) lib;
@@ -38,18 +63,21 @@
           inherit src;
           strictDeps = true;
 
-          buildInputs = [
-            # Add additional build inputs here
-          ] ++ lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
-            pkgs.libiconv
-          ];
+          buildInputs =
+            [
+              # Add additional build inputs here
+            ]
+            ++ lib.optionals pkgs.stdenv.isDarwin [
+              # Additional darwin specific inputs can be set here
+              pkgs.libiconv
+            ];
 
           # Additional environment variables can be set directly
           # MY_CUSTOM_VAR = "some value";
         };
 
-        craneLibLLvmTools = craneLib.overrideToolchain
+        craneLibLLvmTools =
+          craneLib.overrideToolchain
           (fenix.packages.${system}.complete.withComponents [
             "cargo"
             "llvm-tools"
@@ -62,11 +90,11 @@
 
         # Build the actual crate itself, reusing the dependency
         # artifacts from above.
-        ddi = craneLib.buildPackage (commonArgs // {
-          inherit cargoArtifacts;
-        });
-      in
-      {
+        ddi = craneLib.buildPackage (commonArgs
+          // {
+            inherit cargoArtifacts;
+          });
+      in {
         checks = {
           # Build the crate as part of `nix flake check` for convenience
           inherit ddi;
@@ -77,14 +105,16 @@
           # Note that this is done as a separate derivation so that
           # we can block the CI if there are issues here, but not
           # prevent downstream consumers from building our crate by itself.
-          ddi-clippy = craneLib.cargoClippy (commonArgs // {
-            inherit cargoArtifacts;
-            cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-          });
+          ddi-clippy = craneLib.cargoClippy (commonArgs
+            // {
+              inherit cargoArtifacts;
+              cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+            });
 
-          ddi-doc = craneLib.cargoDoc (commonArgs // {
-            inherit cargoArtifacts;
-          });
+          ddi-doc = craneLib.cargoDoc (commonArgs
+            // {
+              inherit cargoArtifacts;
+            });
 
           # Check formatting
           ddi-fmt = craneLib.cargoFmt {
@@ -104,20 +134,24 @@
           # Run tests with cargo-nextest
           # Consider setting `doCheck = false` on `ddi` if you do not want
           # the tests to run twice
-          ddi-nextest = craneLib.cargoNextest (commonArgs // {
-            inherit cargoArtifacts;
-            partitions = 1;
-            partitionType = "count";
-          });
+          ddi-nextest = craneLib.cargoNextest (commonArgs
+            // {
+              inherit cargoArtifacts;
+              partitions = 1;
+              partitionType = "count";
+            });
         };
 
-        packages = {
-          default = ddi;
-        } // lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
-          ddi-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs // {
-            inherit cargoArtifacts;
-          });
-        };
+        packages =
+          {
+            default = ddi;
+          }
+          // lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
+            ddi-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs
+              // {
+                inherit cargoArtifacts;
+              });
+          };
 
         apps.default = flake-utils.lib.mkApp {
           drv = ddi;
@@ -135,5 +169,6 @@
             # pkgs.ripgrep
           ];
         };
-      });
+      };
+    };
 }
