@@ -75,7 +75,7 @@
                   })
                 ];
                 nixpkgs.overlays = [
-                  (self: super: {
+                  (_self: super: {
                     ddi = self.outputs.packages.${pkgs.system}.default;
                     #packages.x86_64-linux.default
                     # inherit ddi;
