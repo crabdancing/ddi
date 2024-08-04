@@ -1,5 +1,5 @@
 {
-  description = "Build DDI -- a safe Rust DD";
+  description = "Build DDI -- a safe Rust wrapper for DD";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -35,6 +35,23 @@
   } @ inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
       flake = {
+        nixosModules = let
+        in {
+          default = {pkgs, ...}: {
+            imports = [
+              ./module.nix
+              ({...}: {
+                nixpkgs.overlays = [
+                  (self: super: {
+                    ddi = self.outputs.packages.${pkgs.system}.default;
+                    #packages.x86_64-linux.default
+                    # inherit ddi;
+                  })
+                ];
+              })
+            ];
+          };
+        };
       };
 
       systems = [
@@ -42,11 +59,7 @@
         "aarch64-linux"
       ];
 
-      perSystem = {
-        config,
-        system,
-        ...
-      }: let
+      perSystem = {system, ...}: let
         # flake-utils.lib.eachDefaultSystem (system: let
         pkgs = nixpkgs.legacyPackages.${system};
 
