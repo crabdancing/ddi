@@ -41,6 +41,40 @@
             imports = [
               ./module.nix
               ({...}: {
+                environment.systemPackages = [
+                  (pkgs.writeShellApplication {
+                    name = "ddi";
+                    runtimeInputs = [
+                      pkgs.ddi
+                      pkgs.coreutils
+                    ];
+                    text = ''
+                      exec ddi status=progress "$@"
+                    '';
+                  })
+
+                  (pkgs.writeShellApplication {
+                    name = "dd";
+                    runtimeInputs = [
+                      pkgs.ddi
+                      pkgs.coreutils
+                    ];
+                    text = ''
+                      echo "WARNING: It\`s safer to call \`ddi\` than \`dd\`, so \`dd\` is hard-wrapped to \`ddi\` in Dolomite."
+                      echo "If you want to call the OG command, use \`dangerous-dd\`"
+                      echo "Otherwise, always use \`ddi\`"
+                      exec ddi "$@"
+                    '';
+                    meta.priority = -1;
+                  })
+                  (pkgs.writeShellApplication {
+                    name = "dangerous-dd";
+                    runtimeInputs = [pkgs.coreutils];
+                    text = ''
+                      exec dd "$@"
+                    '';
+                  })
+                ];
                 nixpkgs.overlays = [
                   (self: super: {
                     ddi = self.outputs.packages.${pkgs.system}.default;
