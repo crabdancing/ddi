@@ -39,7 +39,6 @@
         in {
           default = {pkgs, ...}: {
             imports = [
-              ./module.nix
               ({...}: {
                 environment.systemPackages = [
                   (pkgs.writeShellApplication {
