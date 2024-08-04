@@ -15,8 +15,6 @@
       inputs.rust-analyzer-src.follows = "";
     };
 
-    flake-utils.url = "github:numtide/flake-utils";
-
     advisory-db = {
       url = "github:rustsec/advisory-db";
       flake = false;
@@ -32,7 +30,6 @@
     nixpkgs,
     crane,
     fenix,
-    flake-utils,
     advisory-db,
     ...
   } @ inputs:
@@ -152,10 +149,6 @@
                 inherit cargoArtifacts;
               });
           };
-
-        apps.default = flake-utils.lib.mkApp {
-          drv = ddi;
-        };
 
         devShells.default = craneLib.devShell {
           # Inherit inputs from checks.
